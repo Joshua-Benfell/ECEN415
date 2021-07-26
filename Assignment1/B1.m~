@@ -1,0 +1,15 @@
+%a
+close all
+D = tf(1);
+td = 0.1;
+D.IODelay = td;
+figure(1)
+bode(D);
+
+figure(2)
+leg = cell()
+for td = 0:0.00005:0.0003
+    D.IODelay = td;
+    hold on
+    margin(pade(D))
+end
