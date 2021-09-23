@@ -26,6 +26,7 @@ K = place(A,B,poles);
 hold on
 impulse(ss(A-B*K,B,C,D))
 hold off
+legend("Uncontrolled", "Controlled")
 
 figure(2)
 % Discrete Time
