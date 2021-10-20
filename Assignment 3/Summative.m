@@ -36,8 +36,6 @@ p = [-100 -100];
 
 A_shrink = csys.A(1:2,1:2);
 B_shrink = csys.B(1:2,1:2);
-C_shrink = csys.C(1:2);
-D_shrink = csys.D;
 
 K_shrink = place(A_shrink,B_shrink,p);
 K = zeros(size(B.'));
@@ -46,7 +44,7 @@ K(1:2,1:2) = K_shrink
 reg_sys = ss(A-B*K, B, C, D)
 
 
-p = [-100+500j -100-500j -200+500j -200-500j -150 -150];
+p = [-100+500j -100-500j -200+500j -200-500j -100 -100];
 k_adv = place(A, B, p);
 sys_adv = ss(A-B*k_adv, B, C, D)
 
@@ -62,7 +60,7 @@ legend("Unregulated", "Simplified Regulated", "Regulated")
 A_i = [A zeros(length(A),1) zeros(length(A),1) ; -1 0 0 0 0 0 0 0; 0 -1 0 0 0 0 0 0];
 B_i = [B ; 0 0; 0 0];
 
-alpha_c = [p -100 -100];
+alpha_c = [p -150 -150];
 
 k_i = place(A_i, B_i, alpha_c);
 sys_i = ss(A_i-B_i*k_i, [zeros(size(B)); 1 0; 0 1], [C 0 0], D);
@@ -89,7 +87,7 @@ hold off
 legend("Unregulated", "Simplified Regulated", "Regulated", "Integrator", "Perturbed Integrator")
 
 % d 
-x0 = [1 1 0 0 0 0 0 0];
+x0 = [1 1 0 1 0 0 -1 0];
 t = linspace(0,1,10000).';
 u = [repmat([0 0], length(t)/4, 1);
     repmat([1 1], length(t)/4, 1);
