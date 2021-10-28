@@ -56,7 +56,7 @@ f = @(t,x) [x(2);
             x(8)*sin(deg2rad(x(5))) / (M+x(7));
             x(6);
             k/(J+L^2*x(7))*x(9);
-            -1/eta*(x(8)+x(9));
+            -1/eta*(abs(x(8))+abs(x(9)));
             0;
             0];
         
@@ -80,15 +80,15 @@ elapsed_time = 0;
 
 % % Symbolic Model --------------------------------------------------------
 
-syms x1 x2 x3 x4 x5 x6 x7 i1 i2
-f_sym = @(t,x) [x2; 
-                g + i1*cos(x5) / (M+x7) - c_d*x2^2;  
-                x4;
-                i1*sin(x5) / (M+x7);
-                x6;
-                k/(J+L^2*x7)*i2;
-                -1/eta*(i1+i2);
-                ];
+%syms x1 x2 x3 x4 x5 x6 x7 i1 i2
+%f_sym = @(t,x) [x2; 
+%                g + i1*cos(x5) / (M+x7) - c_d*x2^2;  
+%                x4;
+%                i1*sin(x5) / (M+x7);
+%                x6;
+%                k/(J+L^2*x7)*i2;
+%                -1/eta*(i1+i2);
+%                ];
             
 
 % 
@@ -132,12 +132,13 @@ figure(2)
 subplot(211)
 plot(t_store, x_store)
 ylabel('x')
+legend("x1","x2","x3","x4","x5","x6","x7")
 
 subplot(212)
 plot(t_store, u_store)
 xlabel('Time [s]')
 ylabel('u')
-
+legend("u1","u2")
 %--------------------------------------------------------------------------
 % Plotting function to display the telemetry during flight.
 %--------------------------------------------------------------------------
@@ -197,36 +198,57 @@ end
 
 function[u1, u2] = controller_command(t, x)
     global eta x_0 g M c_d J L k
-    
     if (length(x) == 7)
-       x(8:9) = [0 0];
+       x(8:9) = [100000 10];
     end
-    
+    if x(8) == 0
+        x(8) = 100000;
+    end
+
     syms x1 x2 x3 x4 x5 x6 x7 i1 i2
     f_sym = @(t,x) [x2; 
-                g + i1*cos(x5) / (M+x7) - c_d*x2^2;  
-                x4;
-                i1*sin(x5) / (M+x7);
-                x6;
-                k/(J+L^2*x7)*i2;
-                -1/eta*(i1+i2);
-                ];
+                    g + i1*cos(x5) / (M+x7) - c_d*x2^2*exp(-x1/10400);  
+                    x4;
+                    i1*sin(x5) / (M+x7);
+                    x6;
+                    k/(J+L^2*x7)*i2;
+                    -1/eta*(abs(i1)+abs(i2));
+                    ];
     df = jacobian(f_sym, [x1 x2 x3 x4 x5 x6 x7]);
     dg = jacobian(f_sym, [i1 i2]);
     A = double(subs(df, [x1 x2 x3 x4 x5 x6 x7 i1 i2], x));
-    B = double(subs(dg, [x5 x7], [x(5) x(7)]));
-    C = [1 1 1 1 1 1 1];
-    D = 0;
+    B = double(subs(dg, [x1 x2 x3 x4 x5 x6 x7 i1 i2], x));    
+    %x_f = [1500, 130, 100, 20, 10, 0, 0];
+    x_desired = [100000*(t+1)/15;
+                 130*(t+1)/15; 
+                 75; 
+                 20; 
+                 10;
+                 10*(1-(t)/15); 
+                 100*(1-(t)/15)
+                 ];
+        
+    x_curr = x(1:7).';
+    u_curr = x(8:9).';
     
-    sys = ss(A,B,C,D);
+    x_bounds = [100; 50; 25; 1; 0.5; 0.1; 0.1];
+    u_bounds = [100000 1000000].';
     
+    %u = pinv(B) * (x_desired-x_curr-A*x_curr)
+    Q = diag((x_bounds.^2)./x_desired.^2)
+    R = diag((u_bounds)./u_curr.^2)
+    [K,P,e] = lqr(A, B, Q, R)
+    u = -K*x_curr
+    if (u(1) < 0)
+       u(1) = 0; 
+    end
+    %u1 = min(2*10^5,u(1));
+    u1 = u(1);
+    u2 = u(2);
+
     
-    %K = place(A, B, p)
-    
-    %x_f = [1500, nan, 100, 20, 10, 0, 0];
-    
-    u1 = eta*x_0(7)/15; % Burn all of the fuel in 15s at uniform rate. 
-    u2 = eta*2;
+    %u1 = eta*x_0(7)/15; % Burn all of the fuel in 15s at uniform rate. 
+    %u2 = eta*2;
 end
 
 % END =========================================================================
